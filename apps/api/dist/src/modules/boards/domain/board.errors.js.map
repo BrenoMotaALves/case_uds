@@ -1,0 +1,1 @@
+{"version":3,"file":"board.errors.js","sourceRoot":"","sources":["../../../../../src/modules/boards/domain/board.errors.ts"],"names":[],"mappings":";;;AAAA,MAAa,kBAAmB,SAAQ,KAAK;IAC3C,YAAY,EAAU;QACpB,KAAK,CAAC,iBAAiB,EAAE,YAAY,CAAC,CAAC;QACvC,IAAI,CAAC,IAAI,GAAG,oBAAoB,CAAC;IACnC,CAAC;CACF;AALD,gDAKC"}

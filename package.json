@@ -1,0 +1,22 @@
+{
+  "name": "mini-kanban",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"pnpm dev:api\" \"pnpm dev:web\"",
+    "dev:api": "pnpm --filter @mini-kanban/api dev",
+    "dev:web": "pnpm --filter @mini-kanban/web dev",
+    "build": "pnpm --filter @mini-kanban/api build && pnpm --filter @mini-kanban/web build",
+    "test": "pnpm --filter @mini-kanban/api test",
+    "test:e2e": "pnpm --filter @mini-kanban/api test:e2e",
+    "db:up": "docker compose -f apps/api/docker-compose.yml up -d",
+    "db:down": "docker compose -f apps/api/docker-compose.yml down",
+    "prisma:migrate": "pnpm --filter @mini-kanban/api prisma:migrate",
+    "prisma:seed": "pnpm --filter @mini-kanban/api prisma:seed"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
