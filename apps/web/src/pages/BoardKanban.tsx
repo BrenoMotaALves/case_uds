@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { getBoard, updateBoard } from '../api/boards';
 import { createCard, deleteCard, moveCard } from '../api/cards';
 import type { BoardDetail, Card } from '../api/types';
@@ -17,6 +19,13 @@ const BoardKanban = () => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editingName, setEditingName] = useState('');
   const [savingName, setSavingName] = useState(false);
+  const [isMoving, setIsMoving] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 }
+    })
+  );
 
   const fetchBoard = async () => {
     if (!id) {
@@ -70,6 +79,7 @@ const BoardKanban = () => {
     if (!movingCard) {
       return;
     }
+    setIsMoving(true);
     setStatus('Moving...');
     try {
       await moveCard(movingCard.id, newColumnId);
@@ -78,6 +88,37 @@ const BoardKanban = () => {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao mover card.');
     } finally {
+      setStatus('');
+      setIsMoving(false);
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) {
+      return;
+    }
+    if (active.id === over.id) {
+      return;
+    }
+    const sourceColumnId = active.data.current?.columnId as string | undefined;
+    const destinationColumnId = over.data.current?.columnId as string | undefined;
+    if (!sourceColumnId || !destinationColumnId) {
+      return;
+    }
+    if (sourceColumnId === destinationColumnId) {
+      return;
+    }
+    setIsMoving(true);
+    setStatus('Moving...');
+    setError('');
+    try {
+      await moveCard(String(active.id), destinationColumnId);
+      await fetchBoard();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao mover card.');
+    } finally {
+      setIsMoving(false);
       setStatus('');
     }
   };
@@ -166,36 +207,42 @@ const BoardKanban = () => {
           <p>Nenhuma coluna encontrada para este board.</p>
         </section>
       ) : (
-        <div className="kanban-grid">
-          {!hasCards && (
-            <div className="placeholder">
-              <p>Sem cards ainda. Crie o primeiro card em uma das colunas.</p>
-            </div>
-          )}
-          {sortedColumns.map((column) => {
-            const cards = [...column.cards].sort((a, b) => a.position - b.position);
-            return (
-              <KanbanColumn
-                key={column.id}
-                column={column}
-                onCreateCard={handleCreateCard}
-              >
-                {cards.length === 0 ? (
-                  <div className="kanban-card placeholder-card">Nenhum card.</div>
-                ) : (
-                  cards.map((card) => (
-                    <KanbanCard
-                      key={card.id}
-                      card={card}
-                      onDelete={handleDeleteCard}
-                      onMoveRequest={setMovingCard}
-                    />
-                  ))
-                )}
-              </KanbanColumn>
-            );
-          })}
-        </div>
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+          <div className={`kanban-grid${isMoving ? ' is-moving' : ''}`}>
+            {!hasCards && (
+              <div className="placeholder">
+                <p>Sem cards ainda. Crie o primeiro card em uma das colunas.</p>
+              </div>
+            )}
+            {sortedColumns.map((column) => {
+              const cards = [...column.cards].sort((a, b) => a.position - b.position);
+              return (
+                <KanbanColumn
+                  key={column.id}
+                  column={column}
+                  onCreateCard={handleCreateCard}
+                  isBusy={isMoving}
+                >
+                  <SortableContext items={cards.map((card) => card.id)} strategy={verticalListSortingStrategy}>
+                    {cards.length === 0 ? (
+                      <div className="kanban-card placeholder-card">Nenhum card.</div>
+                    ) : (
+                      cards.map((card) => (
+                        <KanbanCard
+                          key={card.id}
+                          card={card}
+                          onDelete={handleDeleteCard}
+                          onMoveRequest={setMovingCard}
+                          disabled={isMoving}
+                        />
+                      ))
+                    )}
+                  </SortableContext>
+                </KanbanColumn>
+              );
+            })}
+          </div>
+        </DndContext>
       )}
 
       <MoveCardModal
