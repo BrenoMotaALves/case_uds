@@ -9,14 +9,32 @@ export async function http<T>(path: string, init?: RequestInit): Promise<T> {
     ...init
   });
 
+  const contentType = response.headers.get('content-type') ?? '';
+  const isJson = contentType.includes('application/json');
+  const hasBody = response.status !== 204;
+
+  const parseBody = async () => {
+    if (!hasBody) {
+      return undefined;
+    }
+    const text = await response.text();
+    if (!text) {
+      return undefined;
+    }
+    if (isJson) {
+      return JSON.parse(text);
+    }
+    return text;
+  };
+
   if (!response.ok) {
     let message = `HTTP error ${response.status}`;
     try {
-      const data = await response.json();
+      const data = await parseBody();
       if (data && typeof data === 'object' && 'message' in data) {
         message = String((data as { message?: unknown }).message ?? message);
-      } else {
-        message = JSON.stringify(data);
+      } else if (typeof data === 'string') {
+        message = data || message;
       }
     } catch {
       // Keep default message when response body is not JSON.
@@ -24,5 +42,5 @@ export async function http<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(message);
   }
 
-  return response.json() as Promise<T>;
+  return (await parseBody()) as T;
 }
