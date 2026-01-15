@@ -7,12 +7,18 @@ const app_module_1 = require("./app.module");
 const http_exception_mapper_1 = require("./shared/errors/http-exception.mapper");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    app.enableCors({
+        origin: 'http://localhost:5173',
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        credentials: true
+    });
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true,
         transform: true,
         forbidNonWhitelisted: true
     }));
-    app.useGlobalFilters(new http_exception_mapper_1.HttpExceptionMapper());
+    app.useGlobalFilters(new http_exception_mapper_1.HttpExceptionMapperFilter());
     if (process.env.NODE_ENV !== 'production') {
         const config = new swagger_1.DocumentBuilder()
             .setTitle('Mini Kanban API')

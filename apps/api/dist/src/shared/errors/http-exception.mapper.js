@@ -6,11 +6,11 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.HttpExceptionMapper = void 0;
+exports.HttpExceptionMapperFilter = void 0;
 const common_1 = require("@nestjs/common");
 const card_errors_1 = require("../../modules/cards/domain/card.errors");
 const board_errors_1 = require("../../modules/boards/domain/board.errors");
-let HttpExceptionMapper = class HttpExceptionMapper {
+let HttpExceptionMapperFilter = class HttpExceptionMapperFilter {
     catch(exception, host) {
         const ctx = host.switchToHttp();
         const response = ctx.getResponse();
@@ -21,18 +21,15 @@ let HttpExceptionMapper = class HttpExceptionMapper {
             return;
         }
         if (exception instanceof board_errors_1.BoardNotFoundError) {
-            const notFound = new common_1.NotFoundException(exception.message);
-            response.status(notFound.getStatus()).json(notFound.getResponse());
+            response.status(404).json({ message: exception.message });
             return;
         }
         if (exception instanceof card_errors_1.ColumnNotFoundError || exception instanceof card_errors_1.CardNotFoundError) {
-            const notFound = new common_1.NotFoundException(exception.message);
-            response.status(notFound.getStatus()).json(notFound.getResponse());
+            response.status(404).json({ message: exception.message });
             return;
         }
         if (exception instanceof card_errors_1.InvalidMoveError) {
-            const invalidMove = new common_1.UnprocessableEntityException(exception.message);
-            response.status(invalidMove.getStatus()).json(invalidMove.getResponse());
+            response.status(422).json({ message: exception.message });
             return;
         }
         response.status(500).json({
@@ -41,8 +38,8 @@ let HttpExceptionMapper = class HttpExceptionMapper {
         });
     }
 };
-exports.HttpExceptionMapper = HttpExceptionMapper;
-exports.HttpExceptionMapper = HttpExceptionMapper = __decorate([
+exports.HttpExceptionMapperFilter = HttpExceptionMapperFilter;
+exports.HttpExceptionMapperFilter = HttpExceptionMapperFilter = __decorate([
     (0, common_1.Catch)()
-], HttpExceptionMapper);
+], HttpExceptionMapperFilter);
 //# sourceMappingURL=http-exception.mapper.js.map

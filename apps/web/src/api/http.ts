@@ -10,7 +10,18 @@ export async function http<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`HTTP error ${response.status}`);
+    let message = `HTTP error ${response.status}`;
+    try {
+      const data = await response.json();
+      if (data && typeof data === 'object' && 'message' in data) {
+        message = String((data as { message?: unknown }).message ?? message);
+      } else {
+        message = JSON.stringify(data);
+      }
+    } catch {
+      // Keep default message when response body is not JSON.
+    }
+    throw new Error(message);
   }
 
   return response.json() as Promise<T>;
