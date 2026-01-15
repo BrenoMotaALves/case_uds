@@ -15,3 +15,13 @@ export async function createBoard(name: string): Promise<BoardDetail | BoardSumm
 export async function getBoard(id: string): Promise<BoardDetail> {
   return http<BoardDetail>(`/boards/${id}`);
 }
+
+export async function updateBoard(
+  boardId: string,
+  payload: { name: string }
+): Promise<BoardDetail | BoardSummary> {
+  return http<BoardDetail | BoardSummary>(`/boards/${boardId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}

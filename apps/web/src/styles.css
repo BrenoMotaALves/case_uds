@@ -27,6 +27,13 @@ body {
   margin-bottom: 24px;
 }
 
+.board-title-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
 .primary {
   background: #1c1c22;
   color: #ffffff;
@@ -117,6 +124,25 @@ select {
   padding: 14px 16px;
   border-radius: 12px;
   border: 1px solid #e4e4ec;
+}
+
+.board-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.board-item-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.board-item-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .board-item a {
