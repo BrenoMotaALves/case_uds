@@ -9,8 +9,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.BoardsModule = void 0;
 const common_1 = require("@nestjs/common");
 const create_board_usecase_1 = require("./application/create-board.usecase");
+const delete_board_usecase_1 = require("./application/delete-board.usecase");
 const get_board_usecase_1 = require("./application/get-board.usecase");
 const list_boards_usecase_1 = require("./application/list-boards.usecase");
+const update_board_usecase_1 = require("./application/update-board.usecase");
 const boards_prisma_repository_1 = require("./infra/boards.prisma.repository");
 const boards_repository_1 = require("./infra/boards.repository");
 const boards_controller_1 = require("./presentation/boards.controller");
@@ -22,8 +24,10 @@ exports.BoardsModule = BoardsModule = __decorate([
         controllers: [boards_controller_1.BoardsController],
         providers: [
             create_board_usecase_1.CreateBoardUseCase,
+            delete_board_usecase_1.DeleteBoardUseCase,
             get_board_usecase_1.GetBoardUseCase,
             list_boards_usecase_1.ListBoardsUseCase,
+            update_board_usecase_1.UpdateBoardUseCase,
             {
                 provide: boards_repository_1.BOARDS_REPOSITORY,
                 useClass: boards_prisma_repository_1.BoardsPrismaRepository

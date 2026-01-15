@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 import {
+  Board,
   BoardCreated,
   BoardListItem,
   BoardWithNested,
@@ -61,6 +62,37 @@ export class BoardsPrismaRepository implements BoardsRepository {
           include: { cards: { orderBy: { position: 'asc' } } }
         }
       }
+    });
+  }
+
+  async findById(id: string): Promise<Board | null> {
+    return this.prisma.board.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+  }
+
+  async updateBoard(id: string, name: string): Promise<Board> {
+    return this.prisma.board.update({
+      where: { id },
+      data: { name },
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+  }
+
+  async deleteBoard(id: string): Promise<void> {
+    await this.prisma.board.delete({
+      where: { id }
     });
   }
 }

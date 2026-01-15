@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CreateBoardDto = exports.CreateBoardColumnDto = void 0;
+exports.UpdateBoardDto = exports.CreateBoardDto = exports.CreateBoardColumnDto = void 0;
 const swagger_1 = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
@@ -41,4 +41,13 @@ __decorate([
     (0, class_transformer_1.Type)(() => CreateBoardColumnDto),
     __metadata("design:type", Array)
 ], CreateBoardDto.prototype, "columns", void 0);
+class UpdateBoardDto {
+}
+exports.UpdateBoardDto = UpdateBoardDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ example: 'Project Alpha' }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MinLength)(1),
+    __metadata("design:type", String)
+], UpdateBoardDto.prototype, "name", void 0);
 //# sourceMappingURL=boards.dto.js.map

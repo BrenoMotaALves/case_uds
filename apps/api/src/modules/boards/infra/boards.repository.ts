@@ -12,6 +12,13 @@ export type BoardListItem = {
   updatedAt: Date;
 };
 
+export type Board = {
+  id: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type BoardWithNested = {
   id: string;
   name: string;
@@ -37,4 +44,7 @@ export interface BoardsRepository {
   createBoardWithColumns(input: CreateBoardInput): Promise<BoardCreated>;
   listBoards(): Promise<BoardListItem[]>;
   getBoardByIdWithNested(id: string): Promise<BoardWithNested | null>;
+  findById(id: string): Promise<Board | null>;
+  updateBoard(id: string, name: string): Promise<Board>;
+  deleteBoard(id: string): Promise<void>;
 }

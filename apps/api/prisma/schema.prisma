@@ -23,7 +23,7 @@ model Column {
   name     String
   position Int
   boardId  String
-  board    Board  @relation(fields: [boardId], references: [id])
+  board    Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
   cards    Card[]
 
   @@index([boardId, position])
@@ -35,7 +35,7 @@ model Card {
   description String?
   position    Int
   columnId    String
-  column      Column  @relation(fields: [columnId], references: [id])
+  column      Column  @relation(fields: [columnId], references: [id], onDelete: Cascade)
 
   @@index([columnId, position])
 }

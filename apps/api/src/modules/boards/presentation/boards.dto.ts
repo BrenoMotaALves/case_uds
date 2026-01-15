@@ -24,3 +24,10 @@ export class CreateBoardDto {
   @Type(() => CreateBoardColumnDto)
   columns?: CreateBoardColumnDto[];
 }
+
+export class UpdateBoardDto {
+  @ApiProperty({ example: 'Project Alpha' })
+  @IsString()
+  @MinLength(1)
+  name!: string;
+}

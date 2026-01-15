@@ -63,6 +63,34 @@ let BoardsPrismaRepository = class BoardsPrismaRepository {
             }
         });
     }
+    async findById(id) {
+        return this.prisma.board.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                name: true,
+                createdAt: true,
+                updatedAt: true
+            }
+        });
+    }
+    async updateBoard(id, name) {
+        return this.prisma.board.update({
+            where: { id },
+            data: { name },
+            select: {
+                id: true,
+                name: true,
+                createdAt: true,
+                updatedAt: true
+            }
+        });
+    }
+    async deleteBoard(id) {
+        await this.prisma.board.delete({
+            where: { id }
+        });
+    }
 };
 exports.BoardsPrismaRepository = BoardsPrismaRepository;
 exports.BoardsPrismaRepository = BoardsPrismaRepository = __decorate([
