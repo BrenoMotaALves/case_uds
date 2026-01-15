@@ -6,28 +6,40 @@ type MoveCardModalProps = {
   columns: Column[];
   card: Card | null;
   onClose: () => void;
-  onConfirm: (newColumnId: string) => void;
+  onConfirm: (newColumnId: string) => Promise<void>;
 };
 
 const MoveCardModal = ({ isOpen, columns, card, onClose, onConfirm }: MoveCardModalProps) => {
   const [selectedColumnId, setSelectedColumnId] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedColumnId(columns[0]?.id ?? '');
+      const availableColumns = columns.filter((column) => column.id !== card?.columnId);
+      setSelectedColumnId(availableColumns[0]?.id ?? '');
     }
-  }, [isOpen, columns]);
+  }, [isOpen, columns, card]);
 
   if (!isOpen || !card) {
     return null;
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (selectedColumnId) {
-      onConfirm(selectedColumnId);
+    if (!selectedColumnId) {
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await onConfirm(selectedColumnId);
+      setSelectedColumnId('');
+      onClose();
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  const availableColumns = columns.filter((column) => column.id !== card.columnId);
 
   return (
     <div className="modal-overlay">
@@ -38,18 +50,20 @@ const MoveCardModal = ({ isOpen, columns, card, onClose, onConfirm }: MoveCardMo
           <select
             value={selectedColumnId}
             onChange={(event) => setSelectedColumnId(event.target.value)}
+            disabled={isSubmitting}
           >
-            {columns.map((column) => (
+            {availableColumns.map((column) => (
               <option key={column.id} value={column.id}>
                 {column.name}
               </option>
             ))}
           </select>
+          {availableColumns.length === 0 && <p>Nenhuma outra coluna disponivel.</p>}
           <div className="modal-actions">
-            <button type="button" className="ghost" onClick={onClose}>
+            <button type="button" className="ghost" onClick={onClose} disabled={isSubmitting}>
               Cancelar
             </button>
-            <button type="submit" className="primary" disabled={!selectedColumnId}>
+            <button type="submit" className="primary" disabled={!selectedColumnId || isSubmitting}>
               Confirmar
             </button>
           </div>

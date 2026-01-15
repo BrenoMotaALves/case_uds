@@ -67,7 +67,7 @@ const BoardsList = () => {
       {error && <p className="error-text">{error}</p>}
 
       {loading ? (
-        <p>Carregando boards...</p>
+        <p>Loading...</p>
       ) : boards.length === 0 ? (
         <section className="placeholder">
           <p>Nenhum board conectado ainda.</p>

@@ -12,6 +12,7 @@ const BoardKanban = () => {
   const [board, setBoard] = useState<BoardDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
   const [movingCard, setMovingCard] = useState<Card | null>(null);
 
   const fetchBoard = async () => {
@@ -40,20 +41,24 @@ const BoardKanban = () => {
     columnId: string,
     payload: { title: string; description?: string }
   ) => {
-    await createCard(columnId, payload);
-    await fetchBoard();
+    setStatus('Saving...');
+    try {
+      await createCard(columnId, payload);
+      await fetchBoard();
+    } finally {
+      setStatus('');
+    }
   };
 
   const handleDeleteCard = async (cardId: string) => {
-    const confirmed = window.confirm('Deseja remover este card?');
-    if (!confirmed) {
-      return;
-    }
+    setStatus('Deleting...');
     try {
       await deleteCard(cardId);
       await fetchBoard();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao remover card.');
+    } finally {
+      setStatus('');
     }
   };
 
@@ -61,12 +66,15 @@ const BoardKanban = () => {
     if (!movingCard) {
       return;
     }
+    setStatus('Moving...');
     try {
       await moveCard(movingCard.id, newColumnId);
       setMovingCard(null);
       await fetchBoard();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao mover card.');
+    } finally {
+      setStatus('');
     }
   };
 
@@ -77,18 +85,30 @@ const BoardKanban = () => {
     return [...board.columns].sort((a, b) => a.position - b.position);
   }, [board]);
 
+  const hasCards = sortedColumns.some((column) => column.cards.length > 0);
+
   return (
     <div className="page">
       <header className="page-header">
         <h1>{board?.name ?? 'Board'}</h1>
       </header>
 
+      {status && <p>{status}</p>}
       {error && <p className="error-text">{error}</p>}
 
       {loading ? (
-        <p>Carregando board...</p>
+        <p>Loading...</p>
+      ) : !board || sortedColumns.length === 0 ? (
+        <section className="placeholder">
+          <p>Nenhuma coluna encontrada para este board.</p>
+        </section>
       ) : (
         <div className="kanban-grid">
+          {!hasCards && (
+            <div className="placeholder">
+              <p>Sem cards ainda. Crie o primeiro card em uma das colunas.</p>
+            </div>
+          )}
           {sortedColumns.map((column) => {
             const cards = [...column.cards].sort((a, b) => a.position - b.position);
             return (
@@ -118,11 +138,7 @@ const BoardKanban = () => {
       <MoveCardModal
         isOpen={Boolean(movingCard)}
         card={movingCard}
-        columns={
-          movingCard && board
-            ? board.columns.filter((column) => column.id !== movingCard.columnId)
-            : []
-        }
+        columns={board?.columns ?? []}
         onClose={() => setMovingCard(null)}
         onConfirm={handleMoveConfirm}
       />
