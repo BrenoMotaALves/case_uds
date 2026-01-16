@@ -211,3 +211,5 @@ Exemplo `PATCH /cards/:id/move` (erro 422):
 - Reordenacao de cards e colunas
 - Drag and Drop com ordenacao dentro da mesma coluna
 - Deploy
+
+📽️ **Vídeo de demonstração:** https://youtu.be/i7t2QQbW-kg
