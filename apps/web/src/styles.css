@@ -145,6 +145,10 @@ select {
   justify-content: flex-end;
 }
 
+.board-switcher {
+  min-width: 200px;
+}
+
 .board-item a {
   text-decoration: none;
   color: inherit;

@@ -25,3 +25,9 @@ export async function updateBoard(
     body: JSON.stringify(payload)
   });
 }
+
+export async function deleteBoard(boardId: string): Promise<void> {
+  await http<void>(`/boards/${boardId}`, {
+    method: 'DELETE'
+  });
+}

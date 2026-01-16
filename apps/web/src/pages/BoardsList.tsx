@@ -1,6 +1,6 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { createBoard, listBoards, updateBoard } from '../api/boards';
+import { createBoard, deleteBoard, listBoards, updateBoard } from '../api/boards';
 import type { BoardSummary } from '../api/types';
 
 const BoardsList = () => {
@@ -12,6 +12,8 @@ const BoardsList = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchBoards = async () => {
     setLoading(true);
@@ -78,6 +80,23 @@ const BoardsList = () => {
     }
   };
 
+  const handleDelete = async (board: BoardSummary) => {
+    const confirmed = window.confirm(`Deseja remover o board "${board.name}"?`);
+    if (!confirmed) {
+      return;
+    }
+    setDeletingId(board.id);
+    setError('');
+    try {
+      await deleteBoard(board.id);
+      await fetchBoards();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao remover board.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="page">
       <header className="page-header">
@@ -91,6 +110,7 @@ const BoardsList = () => {
           placeholder="Nome do board"
           value={name}
           onChange={(event) => setName(event.target.value)}
+          ref={nameInputRef}
         />
         <button type="submit" className="primary" disabled={creating}>
           {creating ? 'Criando...' : 'Create'}
@@ -104,12 +124,20 @@ const BoardsList = () => {
       ) : boards.length === 0 ? (
         <section className="placeholder">
           <p>Nenhum board conectado ainda.</p>
+          <button
+            type="button"
+            className="primary"
+            onClick={() => nameInputRef.current?.focus()}
+          >
+            Criar Board
+          </button>
         </section>
       ) : (
         <ul className="board-list">
           {boards.map((board) => {
             const isEditing = editingId === board.id;
             const isSaving = savingId === board.id;
+            const isDeleting = deletingId === board.id;
             return (
               <li key={board.id} className="board-item">
                 {isEditing ? (
@@ -146,9 +174,17 @@ const BoardsList = () => {
                         type="button"
                         className="secondary"
                         onClick={() => handleEditStart(board)}
-                        disabled={creating || Boolean(savingId)}
+                        disabled={creating || Boolean(savingId) || Boolean(deletingId)}
                       >
                         Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => handleDelete(board)}
+                        disabled={creating || Boolean(savingId) || isDeleting}
+                      >
+                        {isDeleting ? 'Deletando...' : 'Delete'}
                       </button>
                     </div>
                   </div>

@@ -1,25 +1,35 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { getBoard, updateBoard } from '../api/boards';
+import { deleteBoard, getBoard, listBoards, updateBoard } from '../api/boards';
 import { createCard, deleteCard, moveCard } from '../api/cards';
-import type { BoardDetail, Card } from '../api/types';
+import type { BoardDetail, BoardSummary, Card } from '../api/types';
+import BoardSwitcher from '../components/BoardSwitcher';
 import KanbanCard from '../components/KanbanCard';
 import KanbanColumn from '../components/KanbanColumn';
+import CreateBoardModal from '../components/CreateBoardModal';
 import MoveCardModal from '../components/MoveCardModal';
 
 const BoardKanban = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [board, setBoard] = useState<BoardDetail | null>(null);
+  const [boards, setBoards] = useState<BoardSummary[]>([]);
+  const [loadingBoards, setLoadingBoards] = useState(true);
+  const [errorBoards, setErrorBoards] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [notFound, setNotFound] = useState(false);
   const [status, setStatus] = useState('');
   const [movingCard, setMovingCard] = useState<Card | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editingName, setEditingName] = useState('');
   const [savingName, setSavingName] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
+  const [isMutating, setIsMutating] = useState(false);
+  const [isDeletingBoard, setIsDeletingBoard] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -30,19 +40,37 @@ const BoardKanban = () => {
   const fetchBoard = async () => {
     if (!id) {
       setError('Board nao encontrado.');
+      setNotFound(true);
       setLoading(false);
       return;
     }
     setLoading(true);
     setError('');
+    setNotFound(false);
     try {
       const data = await getBoard(id);
       setBoard(data);
       setEditingName(data.name);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao carregar board.');
+      const message = err instanceof Error ? err.message : 'Falha ao carregar board.';
+      setError(message);
+      setNotFound(message.toLowerCase().includes('not found') || message.includes('404'));
+      setBoard(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBoards = async () => {
+    setLoadingBoards(true);
+    setErrorBoards('');
+    try {
+      const data = await listBoards();
+      setBoards(data);
+    } catch (err) {
+      setErrorBoards(err instanceof Error ? err.message : 'Falha ao carregar boards.');
+    } finally {
+      setLoadingBoards(false);
     }
   };
 
@@ -50,20 +78,27 @@ const BoardKanban = () => {
     fetchBoard();
   }, [id]);
 
+  useEffect(() => {
+    fetchBoards();
+  }, []);
+
   const handleCreateCard = async (
     columnId: string,
     payload: { title: string; description?: string }
   ) => {
+    setIsMutating(true);
     setStatus('Saving...');
     try {
       await createCard(columnId, payload);
       await fetchBoard();
     } finally {
       setStatus('');
+      setIsMutating(false);
     }
   };
 
   const handleDeleteCard = async (cardId: string) => {
+    setIsMutating(true);
     setStatus('Deleting...');
     try {
       await deleteCard(cardId);
@@ -72,6 +107,7 @@ const BoardKanban = () => {
       setError(err instanceof Error ? err.message : 'Falha ao remover card.');
     } finally {
       setStatus('');
+      setIsMutating(false);
     }
   };
 
@@ -79,6 +115,7 @@ const BoardKanban = () => {
     if (!movingCard) {
       return;
     }
+    setIsMutating(true);
     setIsMoving(true);
     setStatus('Moving...');
     try {
@@ -90,6 +127,7 @@ const BoardKanban = () => {
     } finally {
       setStatus('');
       setIsMoving(false);
+      setIsMutating(false);
     }
   };
 
@@ -109,6 +147,7 @@ const BoardKanban = () => {
     if (sourceColumnId === destinationColumnId) {
       return;
     }
+    setIsMutating(true);
     setIsMoving(true);
     setStatus('Moving...');
     setError('');
@@ -120,6 +159,7 @@ const BoardKanban = () => {
     } finally {
       setIsMoving(false);
       setStatus('');
+      setIsMutating(false);
     }
   };
 
@@ -142,6 +182,33 @@ const BoardKanban = () => {
     } finally {
       setSavingName(false);
     }
+  };
+
+  const handleDeleteBoard = async () => {
+    if (!board) {
+      return;
+    }
+    const confirmed = window.confirm(`Deseja remover o board "${board.name}"?`);
+    if (!confirmed) {
+      return;
+    }
+    setIsDeletingBoard(true);
+    setError('');
+    try {
+      await deleteBoard(board.id);
+      navigate('/');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao remover board.');
+    } finally {
+      setIsDeletingBoard(false);
+    }
+  };
+
+  const handleBoardChange = (boardId: string) => {
+    if (!boardId) {
+      return;
+    }
+    navigate(`/boards/${boardId}`);
   };
 
   const sortedColumns = useMemo(() => {
@@ -172,11 +239,16 @@ const BoardKanban = () => {
                   setIsEditingName(false);
                   setEditingName(board?.name ?? '');
                 }}
-                disabled={savingName}
+                disabled={savingName || isMutating}
               >
                 Cancelar
               </button>
-              <button type="button" className="primary" onClick={handleNameSave} disabled={savingName}>
+              <button
+                type="button"
+                className="primary"
+                onClick={handleNameSave}
+                disabled={savingName || isMutating}
+              >
                 {savingName ? 'Salvando...' : 'Salvar'}
               </button>
             </div>
@@ -185,13 +257,58 @@ const BoardKanban = () => {
           <>
             <h1>{board?.name ?? 'Board'}</h1>
             {board && (
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => setIsEditingName(true)}
-              >
-                Edit name
-              </button>
+              <div className="board-item-actions">
+                {errorBoards ? (
+                  <button type="button" className="secondary" onClick={() => navigate('/')}>
+                    Voltar
+                  </button>
+                ) : loadingBoards ? (
+                  <span>Carregando boards...</span>
+                ) : boards.length === 0 ? (
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => setIsCreateModalOpen(true)}
+                    disabled={isDeletingBoard || isMutating}
+                  >
+                    Criar board
+                  </button>
+                ) : (
+                  <BoardSwitcher
+                    boards={boards}
+                    value={id ?? ''}
+                    onChange={handleBoardChange}
+                    disabled={isDeletingBoard || isMutating}
+                  />
+                )}
+                <button type="button" className="secondary" onClick={() => navigate('/')}>
+                  Boards
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setIsCreateModalOpen(true)}
+                  disabled={isDeletingBoard || isMutating}
+                >
+                  Novo Board
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setIsEditingName(true)}
+                  disabled={isDeletingBoard || isMutating}
+                >
+                  Edit name
+                </button>
+                <button
+                  type="button"
+                  className="danger"
+                  onClick={handleDeleteBoard}
+                  disabled={isDeletingBoard || isMutating}
+                >
+                  {isDeletingBoard ? 'Deletando...' : 'Delete Board'}
+                </button>
+              </div>
             )}
           </>
         )}
@@ -202,9 +319,26 @@ const BoardKanban = () => {
 
       {loading ? (
         <p>Loading...</p>
+      ) : notFound ? (
+        <section className="placeholder">
+          <p>Board nao encontrado.</p>
+          <button type="button" className="secondary" onClick={() => navigate('/')}>
+            Voltar
+          </button>
+        </section>
+      ) : !loadingBoards && boards.length === 0 ? (
+        <section className="placeholder">
+          <p>Nenhum board encontrado.</p>
+          <button type="button" className="primary" onClick={() => setIsCreateModalOpen(true)}>
+            Criar board
+          </button>
+        </section>
       ) : !board || sortedColumns.length === 0 ? (
         <section className="placeholder">
           <p>Nenhuma coluna encontrada para este board.</p>
+          <button type="button" className="primary" onClick={() => setIsCreateModalOpen(true)}>
+            Novo Board
+          </button>
         </section>
       ) : (
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
@@ -212,6 +346,9 @@ const BoardKanban = () => {
             {!hasCards && (
               <div className="placeholder">
                 <p>Sem cards ainda. Crie o primeiro card em uma das colunas.</p>
+                <button type="button" className="secondary" onClick={() => setIsCreateModalOpen(true)}>
+                  Novo Board
+                </button>
               </div>
             )}
             {sortedColumns.map((column) => {
@@ -221,7 +358,7 @@ const BoardKanban = () => {
                   key={column.id}
                   column={column}
                   onCreateCard={handleCreateCard}
-                  isBusy={isMoving}
+                  isBusy={isMoving || isMutating}
                 >
                   <SortableContext items={cards.map((card) => card.id)} strategy={verticalListSortingStrategy}>
                     {cards.length === 0 ? (
@@ -233,7 +370,7 @@ const BoardKanban = () => {
                           card={card}
                           onDelete={handleDeleteCard}
                           onMoveRequest={setMovingCard}
-                          disabled={isMoving}
+                          disabled={isMoving || isMutating}
                         />
                       ))
                     )}
@@ -251,6 +388,15 @@ const BoardKanban = () => {
         columns={board?.columns ?? []}
         onClose={() => setMovingCard(null)}
         onConfirm={handleMoveConfirm}
+      />
+
+      <CreateBoardModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreated={(boardId) => {
+          fetchBoards();
+          navigate(`/boards/${boardId}`);
+        }}
       />
     </div>
   );
