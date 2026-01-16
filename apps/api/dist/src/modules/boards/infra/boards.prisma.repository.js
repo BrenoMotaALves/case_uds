@@ -87,8 +87,16 @@ let BoardsPrismaRepository = class BoardsPrismaRepository {
         });
     }
     async deleteBoard(id) {
-        await this.prisma.board.delete({
-            where: { id }
+        await this.prisma.$transaction(async (tx) => {
+            await tx.card.deleteMany({
+                where: { column: { boardId: id } }
+            });
+            await tx.column.deleteMany({
+                where: { boardId: id }
+            });
+            await tx.board.delete({
+                where: { id }
+            });
         });
     }
 };

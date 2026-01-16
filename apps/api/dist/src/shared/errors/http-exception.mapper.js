@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HttpExceptionMapperFilter = void 0;
 const common_1 = require("@nestjs/common");
+const library_1 = require("@prisma/client/runtime/library");
 const card_errors_1 = require("../../modules/cards/domain/card.errors");
 const board_errors_1 = require("../../modules/boards/domain/board.errors");
 let HttpExceptionMapperFilter = class HttpExceptionMapperFilter {
@@ -30,6 +31,18 @@ let HttpExceptionMapperFilter = class HttpExceptionMapperFilter {
         }
         if (exception instanceof card_errors_1.InvalidMoveError) {
             response.status(422).json({ message: exception.message });
+            return;
+        }
+        if (exception instanceof library_1.PrismaClientKnownRequestError) {
+            if (exception.code === 'P2025') {
+                response.status(404).json({ message: 'Registro nao encontrado.' });
+                return;
+            }
+            if (exception.code === 'P2002') {
+                response.status(409).json({ message: 'Conflito ao salvar registro.' });
+                return;
+            }
+            response.status(400).json({ message: 'Erro de validacao no banco.' });
             return;
         }
         response.status(500).json({
