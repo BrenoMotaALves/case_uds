@@ -5,6 +5,7 @@ import {
   HttpException
 } from '@nestjs/common';
 import { Response } from 'express';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import {
   CardNotFoundError,
   ColumnNotFoundError,
@@ -37,6 +38,19 @@ export class HttpExceptionMapperFilter implements ExceptionFilter {
 
     if (exception instanceof InvalidMoveError) {
       response.status(422).json({ message: exception.message });
+      return;
+    }
+
+    if (exception instanceof PrismaClientKnownRequestError) {
+      if (exception.code === 'P2025') {
+        response.status(404).json({ message: 'Registro nao encontrado.' });
+        return;
+      }
+      if (exception.code === 'P2002') {
+        response.status(409).json({ message: 'Conflito ao salvar registro.' });
+        return;
+      }
+      response.status(400).json({ message: 'Erro de validacao no banco.' });
       return;
     }
 
