@@ -1,34 +1,50 @@
 # Mini Kanban
 
-Projeto full-stack para gerenciar trabalho em um quadro Kanban: um Board (quadro) contem Columns (colunas), e cada Column contem Cards (tarefas). O objetivo e demonstrar dominio, arquitetura e integracao completa entre API e Web.
+Projeto full-stack para gerenciar trabalho em um quadro Kanban. Um Board (quadro) contem Columns (colunas) e cada Column contem Cards (tarefas). O objetivo e demonstrar dominio, arquitetura e integracao completa entre API e Web.
 
-## Demonstracao em video
+## Demo em video
 
 Link do video: <coloque aqui>
 
 Checklist do que mostrar:
-- Fluxo completo no Web (criar board, criar coluna, criar/mover/deletar card)
+- Fluxo completo no Web (CRUD de boards, criar/deletar/mover cards, DnD, switcher)
 - Swagger em execucao
-- Breve explicacao de arquitetura e regra do move
+- Breve explicacao de arquitetura e regra de dominio
 - Execucao dos testes unit e e2e
+- Diferenciais de UX (modal de criar board, board switcher)
 
 ## Features implementadas
 
-- Listar e criar boards
-- Visualizar board com colunas e cards ordenados por position
-- Criar coluna em um board
-- Criar, atualizar e deletar card
-- Mover card entre colunas do mesmo board (regra de dominio com retorno 422 se violada)
+Back-end:
+- CRUD de boards (listar, criar, renomear, deletar)
+- Detalhe de board com colunas e cards ordenados
+- CRUD de cards (criar, atualizar, deletar)
+- Move de card com regra de dominio (mesmo board) e erro 422 se invalido
 - Swagger em `/docs` e `/docs-json`
-- Seed inicial
-- Testes unitarios e e2e cobrindo o fluxo de move
+- Seed com dados iniciais
+- Testes unitarios e e2e focados no move
+- CORS configurado para o front local
+
+Front-end:
+- CRUD de boards (criar, renomear, deletar)
+- Kanban com colunas e cards
+- Criar/deletar cards e mover via modal
+- Tratamento de 204 No Content no client
+
+Diferenciais:
+- Drag and Drop (dnd-kit) para mover cards entre colunas
+- Board Switcher no Kanban para trocar o board ativo
+- Modal de criar board diretamente no Kanban
 
 ## Stack
 
-- Back-end: Node.js, NestJS, Prisma, PostgreSQL, Jest, Swagger
-- Front-end: React, Vite, TypeScript
+Back-end:
+- Node.js, NestJS, Prisma, PostgreSQL, Jest, Swagger
 
-## Estrutura do repositorio
+Front-end:
+- React, Vite, TypeScript, dnd-kit
+
+## Estrutura do repositorio (monorepo)
 
 ```text
 apps/
@@ -36,12 +52,14 @@ apps/
   web/  # React + Vite + TypeScript
 ```
 
-## Arquitetura e decisoes (DDD/SOLID)
+## Arquitetura e decisoes tecnicas
 
-- Camadas: presentation (controllers/DTOs), application (use cases), domain (entidades/regras), infra (repositorios/adapters).
-- Aggregate Root: Board. Column e Card fazem parte do agregado, evitando inconsistencias entre boards.
-- Regra de dominio principal: um card so pode ser movido dentro do mesmo board.
-- Erros de dominio sao mapeados para HTTP via filtro global (APP_FILTER), garantindo respostas consistentes em runtime e nos testes e2e.
+- DDD leve por camadas: presentation (controllers/DTOs), application (use cases), domain (entidades/regras) e infra (repositorios/adapters).
+- Aggregate Root: Board. Column e Card pertencem ao agregado para evitar inconsistencias.
+- Regra de dominio principal: card so pode mover dentro do mesmo board; violacao retorna 422.
+- Excecoes de dominio mapeadas para HTTP via filtro global (APP_FILTER), garantindo respostas consistentes em runtime e nos testes e2e.
+- Prisma adotado por migrations e tipagem consistente.
+- DnD respeita o backend: o front apenas chama PATCH `/cards/:id/move` (sem estado otimista).
 
 ## Como rodar localmente
 
@@ -62,9 +80,10 @@ pnpm dev
 URLs:
 - API: http://localhost:3000
 - Swagger: http://localhost:3000/docs
+- Swagger JSON: http://localhost:3000/docs-json
 - Web: http://localhost:5173
 
-Observacao: CORS ja esta configurado para `http://localhost:5173`.
+Observacao: CORS ja esta configurado para `http://localhost:5173`. Garanta que `VITE_API_URL` aponte para a API local.
 
 ## Variaveis de ambiente
 
@@ -81,7 +100,7 @@ NODE_ENV=development
 VITE_API_URL=http://localhost:3000
 ```
 
-## Como rodar testes
+## Testes
 
 Unitarios:
 ```bash
@@ -94,8 +113,8 @@ pnpm --filter @mini-kanban/api test:e2e
 ```
 
 Notas:
-- E2E usa `DATABASE_URL_TEST`. Recomenda-se um banco separado para evitar conflitos com dados locais.
-- Os testes validam o endpoint de move (sucesso e erro 422 quando a regra de dominio e violada).
+- E2E usa `DATABASE_URL_TEST`. Recomenda-se banco separado.
+- Os testes validam o move permitido e o move invalido (422).
 
 ## Documentacao da API (Swagger)
 
@@ -106,21 +125,24 @@ Notas:
 
 Boards:
 - `GET /boards` - lista boards
-- `POST /boards` - cria board (com ou sem colunas)
-- `GET /boards/:id` - detalhe do board com colunas e cards
+- `POST /boards` - cria board
+- `GET /boards/:id` - detalhe do board
+- `PUT /boards/:id` - renomeia board
+- `DELETE /boards/:id` - remove board (204)
 
-Exemplo `POST /boards` (sem colunas):
+Columns:
+- `POST /boards/:boardId/columns` - cria coluna
+
+Cards:
+- `POST /columns/:columnId/cards` - cria card
+- `PUT /cards/:id` - atualiza card
+- `DELETE /cards/:id` - remove card (204)
+- `PATCH /cards/:id/move` - move card entre colunas
+
+Exemplo `POST /boards`:
 ```json
 {
   "name": "Product Roadmap"
-}
-```
-
-Exemplo `POST /boards` (com colunas):
-```json
-{
-  "name": "Product Roadmap",
-  "columns": [{ "name": "To Do" }, { "name": "In Progress" }, { "name": "Done" }]
 }
 ```
 
@@ -135,26 +157,16 @@ Exemplo `GET /boards/:id` (resposta curta):
       "name": "To Do",
       "position": 1,
       "cards": [
-        { "id": "card-uuid", "title": "Setup", "position": 1, "columnId": "column-uuid" }
+        {
+          "id": "card-uuid",
+          "title": "Setup",
+          "description": null,
+          "position": 1,
+          "columnId": "column-uuid"
+        }
       ]
     }
   ]
-}
-```
-
-Columns:
-- `POST /boards/:boardId/columns` - cria coluna em um board
-
-Cards:
-- `POST /columns/:columnId/cards` - cria card
-- `PUT /cards/:id` - atualiza card
-- `DELETE /cards/:id` - remove card (204 No Content)
-- `PATCH /cards/:id/move` - move card para outra coluna
-
-Exemplo `PATCH /cards/:id/move` (sucesso):
-```json
-{
-  "newColumnId": "column-destino-uuid"
 }
 ```
 
@@ -169,23 +181,23 @@ Exemplo `PATCH /cards/:id/move` (erro 422):
 
 ## Troubleshooting
 
-- Prisma migrate falha com P1001: o banco nao esta rodando; rode `pnpm db:up`.
-- Porta 5432 ocupada: ajuste o mapeamento para 5433 e atualize `DATABASE_URL`.
-- CORS no browser: confira `VITE_API_URL` e o origin permitido na API.
-- DELETE retorna 204: o client precisa lidar com `No Content` (ja tratado no wrapper).
-- Reset do banco: `docker compose down -v` (isso apaga os dados).
+- Prisma migrate falha com P1001: o banco nao esta rodando; execute `pnpm db:up`.
+- Porta 5432 ocupada: ajuste o mapeamento para 5433 no docker compose e atualize `DATABASE_URL`.
+- CORS/VITE_API_URL: confirme que o Vite esta em 5173 e a API em 3000.
+- Reset do banco: `docker compose down -v` (apaga os dados).
+- DELETE retorna 204: o client ja trata `No Content`.
 
 ## Checklist final de entrega
 
 - `pnpm dev` sobe API e Web
-- Swagger acessivel em `/docs`
-- Web permite criar/mover/deletar cards
+- Swagger acessivel em `/docs` e `/docs-json`
+- Web funcionando: CRUD de boards, criar/deletar/mover cards, DnD e board switcher
 - Testes unit e e2e passando
 - Video gravado e linkado
+- Repo publico e commits claros
 
 ## Proximos passos
 
-- Drag-and-drop para cards
-- Reordenacao de colunas e cards
-- Autenticacao e autorizacao
-- Deploy com CI/CD
+- Reordenacao de cards e colunas
+- Drag and Drop com ordenacao dentro da mesma coluna
+- Deploy
