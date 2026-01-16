@@ -1,6 +1,22 @@
 # Mini Kanban
 
+## Visão geral
+
 Projeto full-stack para gerenciar trabalho em um quadro Kanban. Um Board (quadro) contem Columns (colunas) e cada Column contem Cards (tarefas). O objetivo e demonstrar dominio, arquitetura e integracao completa entre API e Web.
+
+## Quick Start
+
+Os passos abaixo permitem rodar o projeto localmente de forma rápida, utilizando Docker para o banco de dados.
+
+```bash
+pnpm install
+pnpm db:up
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env
+pnpm prisma:migrate
+pnpm prisma:seed
+pnpm dev
+```
 
 ## Demo em video
 
@@ -69,13 +85,7 @@ Pre-requisitos:
 - Docker e Docker Compose
 
 Passo a passo:
-```bash
-pnpm install
-pnpm db:up
-pnpm prisma:migrate
-pnpm prisma:seed
-pnpm dev
-```
+Consulte a seção Quick Start.
 
 URLs:
 - API: http://localhost:3000
